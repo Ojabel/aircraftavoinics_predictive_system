@@ -1,0 +1,18 @@
+[
+    {
+      "roll": 10,
+      "pitch": 5,
+      "heading": 90,
+      "altitude": 1000,
+      "airspeed": 200,
+      "turn_coordinator": 0
+    },
+    {
+      "roll": -5,
+      "pitch": 2,
+      "heading": 180,
+      "altitude": 1200,
+      "airspeed": 220,
+      "turn_coordinator": -10
+    }
+  ]

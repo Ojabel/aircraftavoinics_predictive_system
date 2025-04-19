@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <title>Real-Time Flight Indicators</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="js/jquery.flightindicators.js"></script>
+  <style>
+    /* Global block of an indicator */
+    div.instrument {
+      width: 100%;
+      height: 100%;
+      max-width: 350px;
+      max-height: 350px;
+      position: relative;
+      display: inline-block;
+      overflow: hidden;
+    }
+
+    /* The box containing any element of an indicator */
+    div.instrument .box {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Default transformations */
+    div.instrument.attitude div.roll {
+      transition: transform 1s ease-in-out;
+    }
+    div.instrument.attitude div.roll div.pitch {
+      top: 0%;
+      transform: translateY(0%);
+      transition: all 1s cubic-bezier(0.4, 0.0, 0.2, 1);
+      will-change: transform;
+    }
+    div.instrument.heading div.yaw,
+    div.instrument.vario div.vario,
+    div.instrument.speed div.airspeed,
+    div.instrument.turn div.turn_coordinator,
+    div.instrument.altimeter div.pressure,
+    div.instrument.altimeter div.needle,
+    div.instrument.altimeter div.needleSmall {
+      transition: transform 1s ease-in-out;
+    }
+
+    /* Custom Styling for Layout */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #1e1e1e;
+      color: white;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+      width: 100%;
+      max-width: 1200px;
+      padding: 20px;
+      gap: 20px;
+    }
+
+    .instrument-container {
+      text-align: center;
+      background-color: #444;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      flex: 1 1 300px;
+      max-width: 350px;
+    }
+
+    .connection-status-container {
+      background-color: #444;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      width: 100%;
+    }
+
+    .troubleshooting {
+      color: yellow;
+      font-weight: bold;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    .status {
+      color: lime;
+      font-weight: normal;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+
+    /* Sidebar Styling */
+    .sidebar {
+      height: 100%;
+      width: 0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      background-color: #333;
+      overflow-x: hidden;
+      transition: 0.5s;
+      padding-top: 60px;
+      z-index: 1000;
+    }
+
+    .sidebar a {
+      padding: 10px 15px;
+      text-decoration: none;
+      font-size: 18px;
+      color: white;
+      display: block;
+      transition: 0.3s;
+    }
+
+    .sidebar a:hover {
+      background-color: #575757;
+    }
+
+    .sidebar .closebtn {
+      position: absolute;
+      top: 0;
+      right: 25px;
+      font-size: 36px;
+      margin-left: 50px;
+    }
+
+    .open-sidebar-btn {
+      font-size: 20px;
+      cursor: pointer;
+      background-color: #444;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      margin: 10px;
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 1001;
+    }
+
+    /* Responsive Design Adjustments */
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      div.instrument {
+        max-width: 300px;
+        max-height: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div id="mySidebar" class="sidebar">
+    <a href="javascript:void(0)" class="closebtn" onclick="closeSidebar()">&times;</a>
+    <a href="flight-log.html">Flight Log</a>
+    <a href="#">Feature 2</a>
+    <a href="#">Feature 3</a>
+    <a href="#">Feature 4</a>
+  </div>
+
+  <!-- Open Sidebar Button -->
+  <button class="open-sidebar-btn" onclick="openSidebar()">☰</button>
+
+  <div class="container">
+    <!-- Attitude Indicator at the Top -->
+    <div class="instrument-container">
+      <span id="attitude" class="instrument"></span>
+      <div id="attitude_status" class="status">Status: Normal</div>
+    </div>
+
+    <!-- Connection Status -->
+    <div class="connection-status-container">
+      <div id="esp32_connection_status" class="connection-status">ESP32 Connection: Disconnected</div>
+      <div id="sensor_connection_status" class="connection-status">Sensor Connection: Disconnected</div>
+    </div>
+
+    <!-- Other Indicators -->
+    <div class="instrument-container">
+      <span id="heading" class="instrument"></span>
+      <div id="heading_status" class="status">Status: Normal</div>
+    </div>
+    <div class="instrument-container">
+      <span id="altimeter" class="instrument"></span>
+      <div id="altimeter_status" class="status">Status: Normal</div>
+    </div>
+    <div class="instrument-container">
+      <span id="airspeed" class="instrument"></span>
+      <div id="airspeed_status" class="status">Status: Normal</div>
+    </div>
+    <div class="instrument-container">
+      <span id="turn_coordinator" class="instrument"></span>
+      <div id="turn_coordinator_status" class="status">Status: Normal</div>
+    </div>
+  </div>
+
+  <script>
+    function openSidebar() {
+      document.getElementById("mySidebar").style.width = "250px";
+    }
+
+    function closeSidebar() {
+      document.getElementById("mySidebar").style.width = "0";
+    }
+
+    
+
+    var attitude = $.flightIndicator('#attitude', 'attitude', { size: 350, roll: 0, pitch: 0 });
+    var heading = $.flightIndicator('#heading', 'heading', { size: 250, heading: 0 });
+    var altimeter = $.flightIndicator('#altimeter', 'altimeter', { size: 250 });
+    var airspeed = $.flightIndicator('#airspeed', 'airspeed', { size: 250, airspeed: 0 });
+    var turn_coordinator = $.flightIndicator('#turn_coordinator', 'turn_coordinator', { size: 250, value: 0 });
+
+    var ws = new WebSocket("ws://192.168.43.131:81/");
+
+    ws.onopen = function() {
+      console.log("Connected to WebSocket Server");
+      document.getElementById("esp32_connection_status").innerText = "ESP32 Connection: Connected";
+      document.getElementById("sensor_connection_status").innerText = "Sensor Connection: Connected";
+    };
+
+    ws.onclose = function() {
+      console.log("Disconnected from WebSocket Server");
+      document.getElementById("esp32_connection_status").innerText = "ESP32 Connection: Disconnected";
+      document.getElementById("sensor_connection_status").innerText = "Sensor Connection: Disconnected";
+    };
+
+    ws.onmessage = function(event) {
+      try {
+        var data = JSON.parse(event.data);
+        updateIndicators(data);
+        updateStatusAndTroubleshooting(data);
+        saveFlightData(data); // Save the data to the server
+
+      } catch (e) {
+        console.error("Error parsing sensor data:", e);
+      }
+    };
+
+    
+
+    function updateIndicators(data) {
+      if (data.roll !== undefined) {
+        attitude.setRoll(data.roll);
+        attitude.setPitch(data.pitch);
+        heading.setHeading(data.heading);
+        altimeter.setAltitude(data.altitude);
+        airspeed.setAirSpeed(data.airspeed);
+        turn_coordinator.setTurn(data.turn_coordinator);
+      }
+    }
+
+    function updateStatusAndTroubleshooting(data) {
+      // Attitude
+      if (Math.abs(data.roll) > 45) {
+        document.getElementById("attitude_status").innerText = "Status: Warning";
+      } else {
+        document.getElementById("attitude_status").innerText = "Status: Normal";
+      }
+
+      // Heading
+      if (data.heading < 10 || data.heading > 350) {
+        document.getElementById("heading_status").innerText = "Status: Warning";
+      } else {
+        document.getElementById("heading_status").innerText = "Status: Normal";
+      }
+
+      // Altimeter
+      if (data.altitude < 500) {
+        document.getElementById("altimeter_status").innerText = "Status: Critical";
+      } else {
+        document.getElementById("altimeter_status").innerText = "Status: Normal";
+      }
+
+      // Airspeed
+      if (data.airspeed > 500) {
+        document.getElementById("airspeed_status").innerText = "Status: Critical";
+      } else {
+        document.getElementById("airspeed_status").innerText = "Status: Normal";
+      }
+
+      // Turn Coordinator
+      if (Math.abs(data.turn_coordinator) > 20) {
+        document.getElementById("turn_coordinator_status").innerText = "Status: Warning";
+      } else {
+        document.getElementById("turn_coordinator_status").innerText = "Status: Normal";
+      }
+    }
+
+    
+ 
+    function saveFlightData(data) {
+      // Send the flight data to the server
+      fetch('http://localhost:5000/save-flightdata', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data), // Send the data as JSON
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Failed to save flight data');
+          }
+          console.log('Flight data saved successfully');
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    }
+  </script>
+</body>
+</html>

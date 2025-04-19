@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <title>Real-Time Flight Indicators</title>
+  <!-- Flight Indicators Plugin CSS -->
+  <link rel="stylesheet" type="text/css" href="css/flightindicators.css">
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- jQuery Flight Indicators Plugin -->
+  <script src="js/jquery.flightindicators.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+    /* Update the indicator containers with a longer transition */
+    .indicator {
+      display: inline-block;
+      margin: 10px;
+      /* Apply smooth in-and-out transitions on any transform changes */
+      transition: transform 10s ease-in-out;
+    }
+    #turn_coordinator{
+      transition: transform 1s ease-in-out;
+
+    }
+  </style>
+</head>
+<body>
+  <h1>Real-Time Flight Indicators</h1>
+  <div id="indicators"> 
+    <!-- Indicator containers -->
+    <span id="attitude" class="indicator"></span>
+    <span id="heading" class="indicator"></span>
+    <span id="altimeter" class="indicator"></span>
+    <span id="airspeed" class="indicator"></span>
+    <!-- New Turn Coordinator Indicator -->
+    <span id="turn_coordinator" class="indicator"></span>
+  </div>
+
+  <script>
+    // Initialize flight indicators with initial values.
+    // (Assumes you have extended the plugin or created a custom type "turn_coordinator".)
+    var attitude = $.flightIndicator('#attitude', 'attitude', { size: 400, roll: 0, pitch: 0, showBox: true });
+    var heading  = $.flightIndicator('#heading', 'heading', { size: 200, heading: 0, showBox: true });
+    var altimeter = $.flightIndicator('#altimeter', 'altimeter', { size: 200 });
+    var airspeed = $.flightIndicator('#airspeed', 'airspeed', { size: 200, airspeed: 0, showBox: true });
+    // For the turn coordinator, use a generic instrument update via setValue.
+    var turn_coordinator = $.flightIndicator('#turn_coordinator', 'turn_coordinator', { size: 200, value: 0, showBox: true, label: 'turn' });
+    
+
+    
+    // Create a WebSocket connection.
+    // Replace "ws://192.168.43.131:81/" with your actual WebSocket server address.
+    var ws = new WebSocket("ws://192.168.43.131:81/");
+    
+    ws.onopen = function() {
+      console.log("Connected to WebSocket Server");
+    };
+    
+    ws.onclose = function() {
+      console.log("Disconnected from WebSocket Server");
+    };
+    
+    ws.onmessage = function(event) {
+      // Expect a JSON object with sensor data.
+      // For example: { "roll": 10, "pitch": 5, "heading": 120, "altitude": 35000, "airspeed": 450, "turn_coordinator": 15 }
+      try {
+        var data = JSON.parse(event.data);
+        if (data.roll !== undefined) {
+          attitude.setRoll(data.roll);
+          attitude.setPitch(data.pitch);
+          heading.setHeading(data.heading);
+          altimeter.setAltitude(data.altitude);
+          airspeed.setAirSpeed(data.airspeed);
+          // Use the generic setValue method for turn coordinator updates.
+          turn_coordinator.setTurn(data.turn_coordinator);
+        }
+      } catch (e) {
+        console.error("Error parsing sensor data:", e);
+      }
+    };
+  </script>
+</body>
+</html>

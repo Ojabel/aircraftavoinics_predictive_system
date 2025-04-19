@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <title>Real-Time Flight Indicators & Predictive Maintenance</title>
+  <!-- Flight Indicators Plugin CSS -->
+  <link rel="stylesheet" type="text/css" href="css/flightindicators.css">
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- jQuery Flight Indicators Plugin -->
+  <script src="js/jquery.flightindicators.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+    .indicator {
+      display: inline-block;
+      margin: 10px;
+      transition: transform 10s ease-in-out;
+    }
+    #statusPanel {
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-top: 20px;
+      text-align: left;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Real-Time Flight Indicators & Predictive Maintenance</h1>
+  <div id="indicators">
+    <!-- Instrument containers -->
+    <span id="attitude" class="indicator"></span>
+    <span id="heading" class="indicator"></span>
+    <span id="altimeter" class="indicator"></span>
+    <span id="airspeed" class="indicator"></span>
+    <span id="turn_coordinator" class="indicator"></span>
+  </div>
+  
+  <!-- Status and Troubleshooting Panel -->
+  <div id="statusPanel">
+    <h2>Component Status & Troubleshooting</h2>
+    <div id="predictionsDisplay">Waiting for data...</div>
+  </div>
+
+  <script>
+    // Initialize flight indicators.
+    var attitude = $.flightIndicator('#attitude', 'attitude', { size: 200, roll: 0, pitch: 0, showBox: true });
+    var heading  = $.flightIndicator('#heading', 'heading', { size: 200, heading: 0, showBox: true });
+    var altimeter = $.flightIndicator('#altimeter', 'altimeter', { size: 200 });
+    var airspeed = $.flightIndicator('#airspeed', 'airspeed', { size: 200, airspeed: 0, showBox: true });
+    var turn_coordinator = $.flightIndicator('#turn_coordinator', 'turn_coordinator', { size: 200, value: 0, showBox: true, label: 'Turn Coordinator' });
+    
+    // Create a WebSocket connection to the Python server.
+    var ws = new WebSocket("ws://localhost:8080/");
+    
+    ws.onopen = function() {
+      console.log("Connected to local PC server");
+    };
+    
+    ws.onclose = function() {
+      console.log("Disconnected from local PC server");
+    };
+    
+    ws.onmessage = function(event) {
+      try {
+        var msg = JSON.parse(event.data);
+        // Update instrument readings from sensor data.
+        if (msg.data) {
+          attitude.setRoll(msg.data.roll);
+          attitude.setPitch(msg.data.pitch);
+          heading.setHeading(msg.data.heading);
+          altimeter.setAltitude(msg.data.altitude);
+          airspeed.setAirSpeed(msg.data.airspeed);
+          turn_coordinator.setValue(msg.data.turn_coordinator);
+        }
+        // Update the status panel with predictions and troubleshooting info.
+        if (msg.predictions) {
+          var html = "";
+          for (var key in msg.predictions) {
+            if (msg.predictions.hasOwnProperty(key)) {
+              html += "<h3>" + key.charAt(0).toUpperCase() + key.slice(1) + "</h3>";
+              html += "<p>Status: " + msg.predictions[key].status + "</p>";
+              html += "<p>Recommendation: " + msg.predictions[key].recommendation + "</p>";
+            }
+          }
+          if(msg.component_status) {
+            html = "<h3>Overall Status: " + msg.component_status + "</h3>" + html;
+          }
+          if(msg.timestamp) {
+            html += "<p>Timestamp: " + msg.timestamp + "</p>";
+          }
+          $("#predictionsDisplay").html(html);
+        }
+      } catch(e) {
+        console.error("Error parsing JSON:", e);
+      }
+    };
+  </script>
+</body>
+</html>

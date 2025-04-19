@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flight Log</title>
+  <style>
+    /* General Styling */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #1e1e1e;
+      color: white;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      margin: 20px 0;
+      font-size: 2rem;
+      color: #f0f0f0;
+    }
+
+    .log-container {
+      background-color: #2c2c2c;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      max-width: 90%;
+      width: 1000px;
+      margin: 20px auto;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #555;
+    }
+
+    th {
+      background-color: #444;
+      color: #f0f0f0;
+      font-weight: bold;
+    }
+
+    tr:nth-child(even) {
+      background-color: #333;
+    }
+
+    tr:hover {
+      background-color: #555;
+    }
+
+    td {
+      color: #ddd;
+    }
+
+
+    /* Sidebar Styling */
+    .sidebar {
+      height: 100%;
+      width: 0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      background-color: #333;
+      overflow-x: hidden;
+      transition: 0.5s;
+      padding-top: 60px;
+      z-index: 1000;
+    }
+
+    .sidebar a {
+      padding: 10px 15px;
+      text-decoration: none;
+      font-size: 18px;
+      color: white;
+      display: block;
+      transition: 0.3s;
+    }
+
+    .sidebar a:hover {
+      background-color: #575757;
+    }
+
+    .sidebar .closebtn {
+      position: absolute;
+      top: 0;
+      right: 25px;
+      font-size: 36px;
+      margin-left: 50px;
+    }
+
+    .open-sidebar-btn {
+      font-size: 20px;
+      cursor: pointer;
+      background-color: #444;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      margin: 10px;
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 1001;
+    }
+
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      .log-container {
+        padding: 15px;
+        width: 95%;
+      }
+
+      th, td {
+        padding: 10px;
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      th, td {
+        padding: 8px;
+        font-size: 0.8rem;
+      }
+
+      h1 {
+        font-size: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+   <!-- Sidebar -->
+   <div id="mySidebar" class="sidebar">
+    <a href="javascript:void(0)" class="closebtn" onclick="closeSidebar()">&times;</a>
+    <a href="index2.html">Dashboard</a>
+    <a href="#">Feature 2</a>
+    <a href="#">Feature 3</a>
+    <a href="#">Feature 4</a>
+  </div>
+
+  <!-- Open Sidebar Button -->
+  <button class="open-sidebar-btn" onclick="openSidebar()">☰</button>
+
+  <h1>Flight Log</h1>
+  <div class="log-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Roll</th>
+          <th>Pitch</th>
+          <th>Heading</th>
+          <th>Altitude</th>
+          <th>Airspeed</th>
+          <th>Turn Coordinator</th>
+        </tr>
+      </thead>
+      <tbody id="flightLogTable">
+        <!-- Data will be dynamically inserted here -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+
+    function openSidebar() {
+      document.getElementById("mySidebar").style.width = "250px";
+    }
+
+    function closeSidebar() {
+      document.getElementById("mySidebar").style.width = "0";
+    }
+    // Load the flight log data from the server
+    fetch("http://localhost:5000/get-flightlog")
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to load flight log');
+        }
+        return response.json();
+      })
+      .then(data => {
+        const tableBody = document.getElementById("flightLogTable");
+        data.forEach(log => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${log.timestamp}</td>
+            <td>${log.roll}</td>
+            <td>${log.pitch}</td>
+            <td>${log.heading}</td>
+            <td>${log.altitude}</td>
+            <td>${log.airspeed}</td>
+            <td>${log.turn_coordinator}</td>
+          `;
+          tableBody.appendChild(row);
+        });
+      })
+      .catch(error => {
+        console.error("Error loading flight log:", error);
+      });
+  </script>
+</body>
+</html>
